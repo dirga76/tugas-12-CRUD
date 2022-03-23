@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tugas 12</title>
+</head>
+
+<body>
+    <div id="app">
+        <form @submit.prevent=submitForm() action="post">
+            <p v-if="errors.length">
+                <b>Please correct the following errors:</b>
+                <ul>
+                    <li v-for="error in errors">{{ error }}</li>
+                </ul>
+            </p>
+            <label>Name</label>
+            <input type="text" :disabled="buttonStatus == 'upload'" name="name" ref="name" v-model="name"><br>
+            <label>Address</label>
+            <textarea type="text" :disabled="buttonStatus == 'upload'" name="address" ref="address" v-model="address"></textarea><br>
+            <label>No. Hp</label>
+            <input type="number" :disabled="buttonStatus == 'upload'" name="no_hp" ref="no_hp" v-model="no_hp">
+            <div v-if="buttonStatus == 'submit'">
+                <input type="submit" value="submit">
+            </div>
+            <div v-else-if="buttonStatus == 'update'">
+                <input @click="UpdateMember(idEdit)" type="button" value="Update">
+                <input type="button" value="Cancel" @click="clearForm">
+            </div>
+            <div v-else-if="buttonStatus == 'upload'">
+                <input type="file" name="photo_profile" ref="photo_profile">
+                <input type="button" @click="uploadMember(idUpload)" value="Upload">
+                <input type="button" @click="clearForm" value="Cancel">
+            </div>
+
+        </form>
+
+        <br><br>
+        <table border=1>
+            <tr v-for="member of members">
+                <td><img width="100" :src="member.photo_profile ? photoDomain + member.photo_profile : 'https://th.bing.com/th/id/OIP.Qe9KDnK2hz1b4fTAqSP-tgHaHa?pid=ImgDet&rs=1'" alt=""></td>
+                <td><b>id : </b>{{ member.id }} <br>
+                    <b>Name : </b>{{ member.name }}<br>
+                    <b>Address : </b>{{ member.address }}<br>
+                    <b>No. Hp : </b>{{ member.no_hp }}</td>
+                <td><button @click="editData(member)">Edit</button></td>
+                <td><button @click="removeData(member.id)">Delete</button></td>
+                <td><button @click="uploadPhoto(member)">Upload</button></td>
+            </tr>
+        </table>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.21.4/dist/axios.min.js"></script>
+    <script>
+        var vm = new Vue({
+            el: '#app',
+            data: {
+                idEdit: '',
+                name: '',
+                address: '',
+                no_hp: '',
+                errors: [],
+                members: [],
+                idUpload: null,
+                idEdit: null,
+                buttonStatus: 'submit',
+                photoDomain: 'http://demo-api-vue.sanbercloud.com'
+            },
+            methods: {
+                validationform: function() {
+                    this.errors = []
+                    if (this.name.length < 5) {
+                        this.errors.push('name Minimal 5 Karakter')
+                        this.$refs.name.focus()
+                    }
+                    if (this.address.length > 10) {
+                        this.errors.push('Alamat Tdak boleh lebih dari 10 Karakter')
+                        this.$refs.address.focus()
+                    }
+                    if (this.no_hp.length > 12) {
+                        this.errors.push('No HP Tdak boleh lebih dari 12 Karakter')
+                        this.$refs.no_hp.focus()
+                    }
+                },
+                submitForm: function() {
+                    this.validationform()
+                    if (this.errors.length === 0) {
+                        let formData = {
+                            name: this.name,
+                            address: this.address,
+                            no_hp: this.no_hp
+
+                        };
+                        axios.post("http://demo-api-vue.sanbercloud.com/api/member", formData)
+                            .then((Response) => {
+                                console.log(Response.data)
+                            })
+                            .catch((error) => {
+                                console.log(error)
+                            })
+                        alert('Terimakasih')
+                    }
+                },
+                getMembers: function() {
+                    const config = {
+                        method: "get",
+                        url: "http://demo-api-vue.sanbercloud.com/api/member"
+                    }
+                    axios(config)
+                        .then((Response) => {
+                            this.members = Response.data.members
+                            console.log(Response.data.members)
+                        })
+                        .catch((error) => {
+                            console.log(error)
+                        })
+                },
+                removeData: function(id) {
+                    const config = {
+                        method: "post",
+                        url: "http//demo-api-vue.sanbercloud.com/api/member/${id}",
+                        params: {
+                            _method: "DELETE"
+                        }
+                    }
+                    axios(config)
+                        .then((Response) => {
+
+                            alert(Response.data.message)
+                            this.getMembers()
+                        })
+                        .catch((error) => {
+                            console.log(error)
+                        })
+                },
+                editData: function(member) {
+                    this.name = member.name
+                    this.address = member.address
+                    this.no_hp = member.no_hp
+                    this.idEdit = member.id
+                    this.buttonStatus = "update"
+                },
+                clearForm: function() {
+                    this.name = ""
+                    this.address = ""
+                    this.no_hp = ""
+                    this.idEdit = null
+                    this.buttonStatus = "submit"
+                },
+                UpdateMember: function(idEdit) {
+                    this.validationform()
+                    if (this.errors.length === 0) {
+                        let formData = {
+                            name: this.name,
+                            address: this.address,
+                            no_hp: this.no_hp
+                        };
+                        axios.post("http://demo-api-vue.sanbercloud.com/api/member/${idEdit}?_method=PUT, formData")
+                            .then((response) => {
+                                this.clearForm()
+                                this.getMembers()
+                                alert(response.data.message)
+                            })
+                            .catch((error) => {
+                                console.log(error)
+                            })
+                    }
+                },
+                uploadPhoto: function(member) {
+                    this.name = member.name
+                    this.address = member.address
+                    this.no_hp = member.no_hp
+                    this.idUpload = member.id
+                    this.buttonStatus = "upload"
+                },
+                uploadMember: function(idUpload) {
+                    console.log(idUpload)
+                    let file = this.$refs.photo_profile.files[0]
+                    let formData = new FormData()
+                    formData.append('photo_profile', file)
+                    const url = `http://demo-api-vue.sanbercloud.com/api/member/${idUpload}/upload-photo-profile`;
+                    axios.post(url, formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        })
+                        .then((response) => {
+                            this.clearForm()
+                            this.getMembers()
+                            alert(response.data.message)
+                        })
+                        .catch((error) => {
+                            console.log(error)
+                        })
+                }
+
+            },
+            created() {
+                this.getMembers()
+            }
+
+        })
+    </script>
+</body>
+
+</html>
